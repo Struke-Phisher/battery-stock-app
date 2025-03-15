@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Battery Stock Maintaining App</title>
+    <style>
+        body { font-family: Arial, sans-serif; text-align: center; background-color: #f4f4f9; padding: 20px; }
+        .container { display: none; padding: 20px; background: white; border-radius: 10px; box-shadow: 0 0 10px rgba(0, 0, 0, 0.1); margin-top: 20px; }
+        .active { display: block; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; background: white; }
+        th, td { border: 1px solid #ddd; padding: 10px; text-align: center; }
+        th { background-color: #4CAF50; color: white; }
+        input, select, button { padding: 10px; margin: 5px; text-align: center; border-radius: 5px; border: 1px solid #ccc; }
+        button { background-color: #007BFF; color: white; border: none; cursor: pointer; }
+        button:hover { background-color: #0056b3; }
+    </style>
+</head>
+<body>
+    <h2>Battery Stock Maintaining App</h2>
+    <button onclick="showTab('entry')">Enter Data</button>
+    <button onclick="showSummary()">View Stock Summary</button>
+    <button onclick="showTab('records')">View All Entries</button>
+    
+    <div id="entry" class="container active">
+        <h3>Enter Battery Stock Data</h3>
+        <label>Date: <input type="date" id="entryDate"></label>
+        <label>Battery Type: 
+            <select id="batteryType">
+                <option value="2.5">2.5</option>
+                <option value="V4">V4</option>
+                <option value="V5">V5</option>
+                <option value="5-1A">5-1A</option>
+            </select>
+        </label>
+        <label>Brand: 
+            <select id="brand">
+                <option value="Kajie">Kajie</option>
+                <option value="Dhara">Dhara</option>
+                <option value="Esdee">Esdee</option>
+            </select>
+        </label>
+        <label>Finishgood IN: <input type="number" id="inFactory"></label>
+        <label>Sales Return: <input type="number" id="salesReturn"></label>
+        <label>FinishGood OUT (to Factory): <input type="number" id="outFactory"></label>
+        <label>Out to Delivery: <input type="number" id="outDelivery"></label>
+        <button onclick="addStock()">Submit Entry</button>
+    </div>
+    
+    <div id="summary" class="container">
+        <h3>Stock Summary</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>Battery Type</th>
+                    <th>Brand</th>
+                    <th>Current Stock</th>
+                </tr>
+            </thead>
+            <tbody id="stockSummary"></tbody>
+        </table>
+    </div>
+    
+    <div id="records" class="container">
+        <h3>Newly Added Records</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Battery Type</th>
+                    <th>Brand</th>
+                    <th>In Factory</th>
+                    <th>Sales Return</th>
+                    <th>Out to Factory</th>
+                    <th>Out to Delivery</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody id="newRecords"></tbody>
+        </table>
+    </div>
+    
+    <script>
+        let stockData = JSON.parse(localStorage.getItem("stockData")) || {};
+        let newRecords = JSON.parse(localStorage.getItem("newRecords")) || [];
+
+        function showTab(tab) {
+            document.getElementById("entry").classList.remove("active");
+            document.getElementById("summary").classList.remove("active");
+            document.getElementById("records").classList.remove("active");
+            document.getElementById(tab).classList.add("active");
+        }
+
+        function showSummary() {
+            updateSummary();
+            showTab("summary");
+        }
+
+        function addStock() {
+            let date = document.getElementById('entryDate').value;
+            let batteryType = document.getElementById('batteryType').value;
+            let brand = document.getElementById('brand').value;
+            let inFactory = parseInt(document.getElementById('inFactory').value) || 0;
+            let salesReturn = parseInt(document.getElementById('salesReturn').value) || 0;
+            let outFactory = parseInt(document.getElementById('outFactory').value) || 0;
+            let outDelivery = parseInt(document.getElementById('outDelivery').value) || 0;
+            
+            let key = batteryType + '-' + brand;
+            if (!stockData[key]) {
+                stockData[key] = { batteryType, brand, currentStock: 0 };
+            }
+            
+            stockData[key].currentStock += inFactory + salesReturn - outFactory - outDelivery;
+            newRecords.push({ date, batteryType, brand, inFactory, salesReturn, outFactory, outDelivery });
+            
+            localStorage.setItem("stockData", JSON.stringify(stockData));
+            localStorage.setItem("newRecords", JSON.stringify(newRecords));
+            
+            updateSummary();
+            updateNewRecords();
+            alert("Stock Updated Successfully!");
+        }
+
+        function updateSummary() {
+            let recordsTable = document.getElementById('stockSummary');
+            recordsTable.innerHTML = "";
+            Object.values(stockData).forEach(stock => {
+                let row = `<tr>
+                    <td>${stock.batteryType}</td>
+                    <td>${stock.brand}</td>
+                    <td>${stock.currentStock}</td>
+                </tr>`;
+                recordsTable.innerHTML += row;
+            });
+        }
+    
+        function updateNewRecords() {
+            let recordsTable = document.getElementById('newRecords');
+            recordsTable.innerHTML = "";
+            newRecords.forEach((record, index) => {
+                let row = `<tr>
+                    <td>${record.date}</td>
+                    <td>${record.batteryType}</td>
+                    <td>${record.brand}</td>
+                    <td>${record.inFactory}</td>
+                    <td>${record.salesReturn}</td>
+                    <td>${record.outFactory}</td>
+                    <td>${record.outDelivery}</td>
+                    <td><button onclick="deleteRecord(${index})">Delete</button></td>
+                </tr>`;
+                recordsTable.innerHTML += row;
+            });
+        }
+    
+        function deleteRecord(index) {
+            newRecords.splice(index, 1);
+            localStorage.setItem("newRecords", JSON.stringify(newRecords));
+            updateNewRecords();
+        }
+
+        updateSummary();
+        updateNewRecords();
+    </script>
+</body>
+</html>
